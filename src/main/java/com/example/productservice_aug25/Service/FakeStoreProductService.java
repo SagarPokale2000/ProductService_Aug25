@@ -1,6 +1,7 @@
 package com.example.productservice_aug25.Service;
 
 import com.example.productservice_aug25.DTOs.FakeStoreProductDTO;
+import com.example.productservice_aug25.Exception.ProductNotFoundException;
 import com.example.productservice_aug25.Models.Category;
 import com.example.productservice_aug25.Models.Product;
 import org.springframework.http.ResponseEntity;
@@ -8,9 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import javax.smartcardio.CardTerminal;
+import java.util.ArrayList;
 import java.util.List;
 
-@Service
+@Service("fakeStoreProductService")
 public class FakeStoreProductService implements ProductService{
 
     private RestTemplate restTemplate;
@@ -21,16 +23,36 @@ public class FakeStoreProductService implements ProductService{
 
     @Override
     public List<Product> getAllProducts() {
-        return List.of();
+
+        ResponseEntity<FakeStoreProductDTO[]> responseEntity =
+                this.restTemplate.getForEntity(
+                        "https://fakestoreapi.com/products",
+                        FakeStoreProductDTO[].class);
+
+        FakeStoreProductDTO[] fakeStoreProductDTO = responseEntity.getBody();
+
+        List<Product> products = new ArrayList<>();
+
+        for (FakeStoreProductDTO dto : fakeStoreProductDTO) {
+            products.add(getProductFromFakeProductDTO(dto));
+        }
+
+        return products;
     }
 
     @Override
-    public Product getSingleProductById(Long productId) {
+    public Product getSingleProductById(Long productId) throws ProductNotFoundException {
         //Make call to fakeStore server
-        ResponseEntity<FakeStoreProductDTO> responseEntity = this.restTemplate.getForEntity("https://fakestoreapi.com/products/"+productId, FakeStoreProductDTO.class);
+        ResponseEntity<FakeStoreProductDTO> responseEntity =
+                this.restTemplate.getForEntity
+                        ("https://fakestoreapi.com/products/"+productId,
+                                FakeStoreProductDTO.class);
 
         FakeStoreProductDTO  fakeStoreProductDTO = responseEntity.getBody();
 
+        if(fakeStoreProductDTO == null){
+            throw new ProductNotFoundException("Product not found");
+        }
         return getProductFromFakeProductDTO(fakeStoreProductDTO);
     }
 
